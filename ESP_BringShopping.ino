@@ -5,7 +5,6 @@
 #define MAX_CONNECT_ATTEMPTS 20
 #define SLEEP_MINS 5
 const char* LIST_ID = "e0cb9303-d682-4fb2-a537-e66aea5706de";
-const char* LOCALE = "en-GB";
 
 // WiFi Parameters
 // TODO: Fetch these from SPIFFS as per my other projects
@@ -13,20 +12,22 @@ const char* ssid = "YOUR_SSID";
 const char* password = "YOUR_PASSWORD";
 
 String listUrlBase = "http://api.getbring.com/rest/bringlists/";
-String articleUrlBase = "http://web.getbring.com/locale/articles.";
+String articlesUrl = "http://api.myjson.com/bins/19ggxd";
 String listUrl = "";
-String articlesUrl = "";
 
 
-JsonObject& fetchJsonData(String url) {
+JsonObject& fetchJsonData(String url, int bufferSize) {
     HTTPClient http;  
     http.begin(url);
     int httpCode = http.GET();
-    //Check the returning code                                                                  
+    //Check the returning code
+    Serial.print("Response: "); 
+    Serial.println(httpCode);                                                                 
     if (httpCode > 0) {
       // Get the request response payload      
-      DynamicJsonBuffer jsonBuffer(2000);
+      DynamicJsonBuffer jsonBuffer(bufferSize);
       JsonObject &data = jsonBuffer.parseObject(http.getString());
+      jsonBuffer.clear();
       http.end();   //Close connection
       return data;
     }
@@ -36,7 +37,6 @@ JsonObject& fetchJsonData(String url) {
 void setup() {
   Serial.begin(115200);
   listUrl = String(listUrlBase + LIST_ID);
-  articlesUrl = String(articleUrlBase + LOCALE + ".json");
 
   WiFi.begin(ssid, password);
 
@@ -52,26 +52,37 @@ void setup() {
       fail();
     }
   }
+  Serial.println("Connected!");
 
   /* Fetch Data */
   // Check WiFi Status
   if (WiFi.status() == WL_CONNECTED) {
-    JsonObject &list = fetchJsonData(listUrl);
-    JsonObject &articles = fetchJsonData(articlesUrl);
-    
+    Serial.println(listUrl);
+    JsonObject &list = fetchJsonData(listUrl, 1500);
+    Serial.println(articlesUrl);
+    JsonObject &articles = fetchJsonData(articlesUrl, 20000 );
+
     Serial.println("*** ARTICLES ***");
+    Serial.println(articles.size());
     for (JsonPair& article : articles) {
       Serial.print(article.key);
       Serial.println(article.value.as<char*>());
     }
     
+    //Serial.println(articles["Ingwer"].as<char*>());
+    
     Serial.println("*** LIST ***");
     JsonArray& items = list["purchase"];
+    Serial.print("List size: ");
+    Serial.println(list.size());
+    Serial.print("Item size: ");
+    Serial.println(items.size());
+    
     for(JsonObject& item : items) {
       Serial.println(item["name"].as<char*>());
+      Serial.println(articles[item["name"].as<char*>()].as<char*>());
     }
   }
-  
 }
 
 void loop() {
@@ -88,7 +99,7 @@ void blink(int onMillis, int offMillis) {
 }
 
 void gotoSleep() {
-  ESP.deepSleep(SLEEP_MINS * 60 * 1000000);
+//  ESP.deepSleep(SLEEP_MINS * 60 * 1000000);
 }
 
 void fail() {
