@@ -59,6 +59,19 @@ void setup() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println(listUrl);
     JsonObject &list = fetchJsonData(listUrl, 1500);
+    
+    Serial.println("*** LIST ***");
+    JsonArray& toPurchase = list["purchase"];
+
+    Serial.print("toPurchase size: ");
+    Serial.println(toPurchase.size());
+    String items[toPurchase.size()];
+    int i = 0;
+    for(JsonObject& item : toPurchase) {
+      Serial.println(item["name"].as<char*>());
+      items[i++] = item["name"].as<char*>();      
+    }
+    
     Serial.println(articlesUrl);
     JsonObject &articles = fetchJsonData(articlesUrl, 20000 );
 
@@ -69,18 +82,8 @@ void setup() {
       Serial.println(article.value.as<char*>());
     }
     
-    //Serial.println(articles["Ingwer"].as<char*>());
-    
-    Serial.println("*** LIST ***");
-    JsonArray& items = list["purchase"];
-    Serial.print("List size: ");
-    Serial.println(list.size());
-    Serial.print("Item size: ");
-    Serial.println(items.size());
-    
-    for(JsonObject& item : items) {
-      Serial.println(item["name"].as<char*>());
-      Serial.println(articles[item["name"].as<char*>()].as<char*>());
+    for (String item: items) {
+      Serial.println(articles[item].as<char*>());
     }
   }
 }
